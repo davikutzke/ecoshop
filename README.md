@@ -1,1 +1,1320 @@
-# ecoshop
+# ecoshop<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EcoShop — Marketplace Sustentável</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #1e293b; }
+header { background: #ffffff; padding: 16px 6%; display: flex; align-items: center; gap: 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+.logo { font-size: 26px; font-weight: 800; color: #15803d; display: flex; align-items: center; gap: 6px; letter-spacing: -0.5px; }
+.search-box { flex: 1; position: relative; display: flex; align-items: center; }
+.search { width: 100%; padding: 12px 20px 12px 42px; border: 1px solid #cbd5e1; border-radius: 30px; font-size: 15px; outline: none; transition: all .2s; }
+.search:focus { border-color: #16a34a; box-shadow: 0 0 0 4px rgba(22,163,74,0.15); }
+.search-icon { position: absolute; left: 15px; color: #94a3b8; font-size: 16px; }
+.nav-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+button { border: 0; border-radius: 10px; padding: 11px 18px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-secondary { background: #f1f5f9; color: #334155; }
+.btn-secondary:hover { background: #e2e8f0; }
+.primary, .cart { background: #16a34a; color: white; }
+.primary:hover, .cart:hover { background: #15803d; }
+.badge { background: #ffffff; color: #16a34a; border-radius: 20px; padding: 2px 8px; font-size: 12px; font-weight: 800; }
+main { max-width: 1280px; margin: auto; padding: 30px 5%; }
+.hero { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-radius: 24px; padding: 40px; margin-bottom: 30px; box-shadow: 0 10px 25px -5px rgba(22,163,74,0.1); }
+.hero h1 { font-size: 38px; color: #092e20; margin-bottom: 12px; line-height: 1.2; font-weight: 800; }
+.hero p { color: #166534; font-size: 17px; line-height: 1.6; }
+.hero-stats { display: flex; gap: 25px; margin-top: 20px; flex-wrap: wrap; }
+.stat-item b { font-size: 20px; color: #092e20; display: block; }
+.stat-item span { font-size: 13px; color: #15803d; }
+.filter-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; }
+.categories { display: flex; gap: 8px; flex-wrap: wrap; }
+.category { background: white; border: 1px solid #e2e8f0; color: #475569; padding: 8px 16px; border-radius: 20px; font-size: 14px; }
+.category:hover { border-color: #16a34a; color: #16a34a; }
+.category.active { background: #16a34a; color: white; border-color: #16a34a; }
+.sort-select { padding: 9px 15px; border-radius: 10px; border: 1px solid #cbd5e1; background: white; color: #334155; font-weight: 600; outline: none; cursor: pointer; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 22px; }
+.card { background: white; border-radius: 18px; padding: 14px; border: 1px solid #f1f5f9; box-shadow: 0 4px 12px rgba(0,0,0,0.03); transition: all .25s ease; display: flex; flex-direction: column; justify-content: space-between; }
+.card:hover { transform: translateY(-5px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
+.img-container { position: relative; width: 100%; height: 200px; border-radius: 14px; overflow: hidden; background: #f8fafc; margin-bottom: 12px; cursor: pointer; }
+.product-image { width: 100%; height: 100%; object-fit: cover; transition: transform .25s ease; }
+.img-container:hover .product-image { transform: scale(1.04); }
+.tag-condition { position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,0.75); color: white; padding: 4px 9px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.card-body h3 { font-size: 16px; color: #0f172a; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rating { font-size: 13px; color: #f59e0b; margin-bottom: 8px; }
+.rating span { color: #64748b; font-size: 12px; }
+.price-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+.price { font-size: 21px; font-weight: 800; color: #16a34a; }
+.old-price { font-size: 13px; color: #94a3b8; text-decoration: line-through; }
+.actions .add { flex: 1; width: 100%; justify-content: center; }
+.overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+.overlay.show { display: flex; }
+.modal { background: white; border-radius: 24px; padding: 28px; width: min(680px, 100%); max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+.close { position: absolute; right: 18px; top: 18px; border-radius: 50%; font-size: 18px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: #f1f5f9; color: #64748b; border: none; cursor: pointer; }
+.close:hover { background: #e2e8f0; color: #0f172a; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px; }
+.modal input, .modal select, .modal textarea { width: 100%; padding: 11px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; outline: none; font-family: inherit; }
+.modal input:focus, .modal select:focus, .modal textarea:focus { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.1); }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+.full { width: 100%; margin-top: 12px; padding: 14px; font-size: 16px; justify-content: center; }
+.auth-tabs { display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; }
+.auth-tab { flex: 1; padding: 12px; background: transparent; border: none; border-bottom: 3px solid transparent; font-weight: 700; font-size: 15px; color: #64748b; border-radius: 0; justify-content: center; cursor: pointer; }
+.auth-tab.active { color: #16a34a; border-bottom-color: #16a34a; }
+.role-selector { display: flex; gap: 10px; margin-bottom: 18px; }
+.role-option { flex: 1; padding: 10px; border: 2px solid #e2e8f0; border-radius: 12px; background: #f8fafc; text-align: center; cursor: pointer; font-size: 13px; font-weight: 700; color: #475569; }
+.role-option.active { border-color: #16a34a; background: #f0fdf4; color: #15803d; }
+.cart-item { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f1f5f9; align-items: center; }
+.cart-item:last-child { border-bottom: none; }
+.cart-item img { width: 70px; height: 70px; object-fit: cover; border-radius: 10px; background: #f8fafc; }
+.cart-item-info { flex: 1; min-width: 0; }
+.cart-item-info h4 { font-size: 14px; color: #0f172a; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cart-item-info .cart-price { font-size: 15px; font-weight: 700; color: #16a34a; }
+.qty-controls { display: flex; align-items: center; gap: 8px; }
+.qty-btn { width: 30px; height: 30px; border-radius: 8px; background: #f1f5f9; color: #334155; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0; }
+.qty-btn:hover { background: #e2e8f0; }
+.qty-value { font-weight: 700; min-width: 24px; text-align: center; }
+.btn-remove { background: #fef2f2; color: #991b1b; padding: 8px 12px; font-size: 13px; }
+.btn-remove:hover { background: #fecaca; }
+.cart-empty { text-align: center; padding: 40px 20px; color: #64748b; }
+.cart-empty span { font-size: 48px; display: block; margin-bottom: 12px; }
+.cart-summary { margin-top: 20px; padding-top: 16px; border-top: 2px solid #e2e8f0; }
+.cart-total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.cart-total-row span { font-size: 15px; color: #64748b; }
+.cart-total-row b { font-size: 24px; color: #16a34a; }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 14px 24px; border-radius: 30px; z-index: 300; display: none; font-size: 14px; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-width: 90%; text-align: center; }
+.toast.show { display: block; animation: fadeInUp .3s ease; }
+@keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+footer { text-align: center; padding: 40px; color: #64748b; font-size: 14px; border-top: 1px solid #e2e8f0; margin-top: 50px; }
+.product-detail { display: flex; gap: 24px; flex-wrap: wrap; }
+.product-detail-img { width: 100%; max-width: 280px; height: 280px; object-fit: cover; border-radius: 16px; background: #f8fafc; }
+.product-detail-info { flex: 1; min-width: 220px; }
+.product-detail-info h2 { font-size: 22px; color: #0f172a; margin-bottom: 8px; line-height: 1.3; }
+.product-detail-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.product-detail-meta span { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: #f1f5f9; color: #475569; }
+.product-detail-meta .cond { background: #0f172a; color: white; }
+.product-detail-meta .cat { background: #dcfce7; color: #15803d; }
+.product-detail-desc { font-size: 14px; color: #475569; line-height: 1.65; margin: 14px 0 18px; }
+.product-detail-prices { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.product-detail-prices .price { font-size: 28px; }
+.loading { text-align: center; padding: 60px; color: #64748b; grid-column: 1 / -1; }
+.field-error { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.15) !important; }
+.img-preview { width: 100%; max-height: 160px; object-fit: cover; border-radius: 12px; margin-top: 8px; display: none; background: #f1f5f9; }
+.seller-hint { font-size: 12px; color: #64748b; margin-bottom: 12px; background: #f0fdf4; padding: 10px 12px; border-radius: 10px; border: 1px solid #bbf7d0; }
+
+:root{--eco:#16a34a;--eco-dark:#15803d;--eco-soft:#dcfce7;--page:#f8fafc;--surface:#fff;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;--card-radius:18px}
+body{background:var(--page);color:var(--ink);transition:background .2s,color .2s}header{background:var(--surface)}.logo,.price,.cart-total-row b{color:var(--eco)}.primary,.cart,.category.active{background:var(--eco)}.primary:hover,.cart:hover{background:var(--eco-dark)}.category:hover,.search:focus{border-color:var(--eco);color:var(--eco)}.hero{background:linear-gradient(135deg,var(--eco-soft),color-mix(in srgb,var(--eco-soft),white 35%))}.hero h1,.stat-item b{color:var(--ink)}.hero p,.stat-item span{color:var(--eco-dark)}.card,.modal{background:var(--surface);color:var(--ink);border-color:var(--line)}.card{border-radius:var(--card-radius)}.card-body h3,.product-detail-info h2,.cart-item-info h4{color:var(--ink)}.search,.sort-select,.modal input,.modal select,.modal textarea{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.settings-trigger{width:42px;height:42px;padding:0;justify-content:center;border-radius:50%;background:var(--surface);color:var(--ink);border:1px solid var(--line);font-size:20px;flex-shrink:0}.settings-trigger:hover{transform:rotate(25deg);background:var(--eco-soft)}.settings-modal{width:min(520px,100%)}.settings-section{padding:14px 0;border-bottom:1px solid var(--line)}.settings-section:last-child{border:0}.settings-section h3{font-size:14px;margin-bottom:10px;color:var(--ink)}.theme-options{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.theme-choice{padding:10px 6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12px}.theme-dot{width:25px;height:25px;border-radius:50%;display:block;border:2px solid rgba(0,0,0,.08)}.settings-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:10px 0;font-size:14px}.settings-row select{max-width:180px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink)}.review-area{flex:0 0 100%;border-top:1px solid var(--line);padding-top:18px;margin-top:8px}.review-area h3{font-size:17px;margin-bottom:12px;color:var(--ink)}.review-form{background:var(--page);padding:14px;border-radius:14px;margin-bottom:14px}.star-picker{display:flex;gap:5px;margin:7px 0 12px}.star-picker button{padding:3px;background:transparent;color:#f59e0b;font-size:25px}.review-list{display:grid;gap:10px}.review-item{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}.review-item strong{font-size:14px}.review-item p{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.5}
+body[data-theme="dark"]{--page:#0f172a;--surface:#172235;--ink:#e5edf7;--muted:#a7b4c7;--line:#334155;--eco-soft:#173c2b}body[data-theme="dark"] .hero{background:linear-gradient(135deg,#173c2b,#1b4734)}body[data-theme="dark"] .hero h1,body[data-theme="dark"] .hero p,body[data-theme="dark"] .stat-item b,body[data-theme="dark"] .stat-item span{color:#e5f7eb}body[data-theme="dark"] .btn-secondary,body[data-theme="dark"] .close,body[data-theme="dark"] .qty-btn{background:#26364c;color:#e5edf7}body[data-theme="dark"] .product-detail-meta span{background:#26364c;color:#dbeafe}body[data-theme="dark"] .product-detail-meta .cond{background:#0b1220;color:white}body.compact .grid{gap:12px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}body.compact .img-container{height:155px}body.no-motion *,body.no-motion *:before,body.no-motion *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+body[data-theme="pink"]{--eco:#db2777;--eco-dark:#be185d;--eco-soft:#fce7f3}body[data-theme="pink"] .hero p,body[data-theme="pink"] .stat-item span{color:#9d174d}body[data-theme="blue"]{--eco:#2563eb;--eco-dark:#1d4ed8;--eco-soft:#dbeafe}body[data-theme="blue"] .hero p,body[data-theme="blue"] .stat-item span{color:#1e40af}body[data-theme="purple"]{--eco:#7c3aed;--eco-dark:#6d28d9;--eco-soft:#ede9fe}body[data-theme="purple"] .hero p,body[data-theme="purple"] .stat-item span{color:#5b21b6}body[data-theme="orange"]{--eco:#ea580c;--eco-dark:#c2410c;--eco-soft:#ffedd5}body[data-theme="orange"] .hero p,body[data-theme="orange"] .stat-item span{color:#9a3412}
+@media(max-width:760px){header{gap:10px;padding:12px 4%;flex-wrap:wrap}.logo{font-size:22px}.search-box{order:4;flex-basis:100%}.nav-actions{flex:1;justify-content:flex-end}.settings-trigger{order:2}.nav-actions button{padding:9px 11px;font-size:12px}.hero{padding:25px}.hero h1{font-size:29px}.form-row{flex-direction:column;gap:0}}
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🌱 EcoShop</div>
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input id="search" class="search" placeholder="Buscar produtos..." autocomplete="off">
+  </div>
+  <button id="settingsBtn" class="settings-trigger" type="button" aria-label="Configurações" title="Configurações">⚙️</button>
+  <div class="nav-actions">
+    <button id="sellBtn" class="btn-secondary" type="button">➕ Vender</button>
+    <button id="loginBtn" class="btn-secondary" type="button">👤 Entrar</button>
+    <button id="cartBtn" class="cart" type="button">🛒 Carrinho <span id="cartCount" class="badge">0</span></button>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="hero-text">
+      <h1>Economize até 70% reutilizando com garantia.</h1>
+      <p>Dê uma segunda vida a eletrônicos, vestuário e equipamentos. Bom para o seu bolso, sustentável para o planeta.</p>
+      <div class="hero-stats">
+        <div class="stat-item"><b id="heroProductCount">—</b><span>Disponíveis agora</span></div>
+        <div class="stat-item"><b>18t CO₂</b><span>Evitados este mês</span></div>
+        <div class="stat-item"><b>4.9 ★</b><span>Satisfação geral</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="filter-bar">
+    <div class="categories">
+      <button class="category active" data-category="Todos" type="button">Todos</button>
+      <button class="category" data-category="Eletrônicos" type="button">💻 Eletrônicos</button>
+      <button class="category" data-category="Calçados" type="button">👟 Calçados</button>
+      <button class="category" data-category="Games" type="button">🎮 Games</button>
+      <button class="category" data-category="Bicicletas" type="button">🚲 Bicicletas</button>
+      <button class="category" data-category="Outros" type="button">📦 Outros</button>
+    </div>
+    <select id="sortSelect" class="sort-select">
+      <option value="featured">Relevância</option>
+      <option value="price-asc">Menor Preço</option>
+      <option value="price-desc">Maior Preço</option>
+      <option value="rating">Melhor Avaliados</option>
+    </select>
+  </div>
+
+  <div id="productsGrid" class="grid">
+    <div class="loading">⏳ Carregando produtos...</div>
+  </div>
+</main>
+
+<footer>
+  🌱 <b>EcoShop Marketplace</b> — Promovendo a economia circular desde 2026.
+</footer>
+
+<!-- LOGIN / CADASTRO -->
+<div class="overlay" id="loginModal">
+  <div class="modal" style="width: min(480px, 100%);">
+    <button class="close" data-close="loginModal" type="button">×</button>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" type="button">Entrar</button>
+      <button class="auth-tab" id="tabRegister" type="button">Criar Conta</button>
+    </div>
+
+    <div id="panelLogin">
+      <div class="form-group">
+        <label>E-mail *</label>
+        <input id="loginEmail" type="email" placeholder="seuemail@exemplo.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>Senha *</label>
+        <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button id="loginSubmit" class="primary full" type="button">Acessar Conta</button>
+    </div>
+
+    <div id="panelRegister" style="display: none;">
+      <div class="role-selector">
+        <div class="role-option active" data-register-type="cliente">🛒 Cliente</div>
+        <div class="role-option" data-register-type="vendedor">🏪 Vendedor</div>
+      </div>
+      <div class="form-group">
+        <label>Nome Completo *</label>
+        <input id="regName" placeholder="Ex: Maria Silva" autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label>E-mail *</label>
+        <input id="regEmail" type="email" placeholder="seuemail@exemplo.com" autocomplete="email">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label id="regDocLabel">CPF *</label>
+          <input id="regDoc" placeholder="000.000.000-00" maxlength="18" inputmode="numeric" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Celular / WhatsApp *</label>
+          <input id="regPhone" placeholder="(11) 99999-9999" maxlength="15" inputmode="numeric" autocomplete="tel">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Criar Senha *</label>
+        <input id="regPassword" type="password" placeholder="Mínimo 4 caracteres" autocomplete="new-password">
+      </div>
+      <button id="regSubmit" class="primary full" type="button">Cadastrar Minha Conta</button>
+    </div>
+  </div>
+</div>
+
+<!-- CARRINHO -->
+<div class="overlay" id="cartModal">
+  <div class="modal" style="width: min(520px, 100%);">
+    <button class="close" data-close="cartModal" type="button">×</button>
+
+    <div id="cartStepItems">
+      <h2 style="margin-bottom: 6px;">🛒 Seu Carrinho</h2>
+      <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">Revise os itens antes de finalizar a compra.</p>
+      <div id="cartItems"></div>
+      <div id="cartSummary" class="cart-summary" style="display: none;">
+        <div class="cart-total-row"><span>Total</span><b id="cartTotal">R$ 0,00</b></div>
+        <button id="checkoutBtn" class="primary full" type="button">➡️ Continuar para Pagamento</button>
+      </div>
+    </div>
+
+    <div id="cartStepPayment" style="display: none;">
+      <h2 style="margin-bottom: 6px;">📦 Dados de Entrega</h2>
+      <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">Preencha seus dados para concluir a compra.</p>
+
+      <div class="form-group">
+        <label>Nome Completo *</label>
+        <input id="payName" type="text" placeholder="Ex: Maria Silva" autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label>CPF *</label>
+        <input id="payCpf" type="text" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>CEP *</label>
+          <input id="payCep" type="text" placeholder="00000-000" maxlength="9" inputmode="numeric" autocomplete="postal-code">
+        </div>
+        <div class="form-group">
+          <label>Número</label>
+          <input id="payNumber" type="text" placeholder="123" autocomplete="off">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Endereço Completo *</label>
+        <input id="payAddress" type="text" placeholder="Rua, bairro, cidade - UF" autocomplete="street-address">
+      </div>
+      <div class="form-group">
+        <label>Forma de Pagamento *</label>
+        <select id="payMethod">
+          <option value="">Selecione...</option>
+          <option value="PIX">PIX</option>
+          <option value="Cartão de Crédito">Cartão de Crédito</option>
+          <option value="Cartão de Débito">Cartão de Débito</option>
+          <option value="Boleto">Boleto Bancário</option>
+        </select>
+      </div>
+
+      <div class="cart-total-row" style="margin-top: 8px; margin-bottom: 12px;">
+        <span>Total a pagar</span>
+        <b id="payTotal">R$ 0,00</b>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button id="backToCartBtn" class="btn-secondary" style="flex: 1; justify-content: center;" type="button">← Voltar</button>
+        <button id="confirmPayBtn" class="primary" style="flex: 2; justify-content: center;" type="button">✅ Confirmar Compra</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETALHE -->
+<div class="overlay" id="productModal">
+  <div class="modal" style="width: min(720px, 100%);">
+    <button class="close" data-close="productModal" type="button">×</button>
+    <div id="productDetailContent" class="product-detail"></div>
+  </div>
+</div>
+
+<!-- VENDER -->
+<div class="overlay" id="sellModal">
+  <div class="modal" style="width: min(560px, 100%);">
+    <button class="close" data-close="sellModal" type="button">×</button>
+    <h2 style="margin-bottom: 6px;">➕ Anunciar Produto</h2>
+    <p class="seller-hint" id="sellHint">Preencha os dados do item. A foto e o anúncio vão direto para o banco de dados e aparecem na vitrine.</p>
+
+    <div class="form-group">
+      <label>Nome do Produto *</label>
+      <input id="sellName" type="text" placeholder="Ex: Notebook Dell Inspiron 15">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Categoria *</label>
+        <select id="sellCategory">
+          <option value="">Selecione...</option>
+          <option value="Eletrônicos">💻 Eletrônicos</option>
+          <option value="Calçados">👟 Calçados</option>
+          <option value="Games">🎮 Games</option>
+          <option value="Bicicletas">🚲 Bicicletas</option>
+          <option value="Outros">📦 Outros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Condição *</label>
+        <select id="sellCondition">
+          <option value="">Selecione...</option>
+          <option value="Seminovo">Seminovo</option>
+          <option value="Usado - Excelente">Usado - Excelente</option>
+          <option value="Usado - Bom">Usado - Bom</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Preço de Venda (R$) *</label>
+        <input id="sellPrice" type="number" min="1" step="0.01" placeholder="Ex: 499.90">
+      </div>
+      <div class="form-group">
+        <label>Preço Original (R$)</label>
+        <input id="sellOldPrice" type="number" min="1" step="0.01" placeholder="Ex: 899.00">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>URL da Imagem (foto do produto) *</label>
+      <input id="sellImage" type="url" placeholder="https://... cole o link da foto">
+      <img id="sellImgPreview" class="img-preview" alt="Prévia">
+    </div>
+    <div class="form-group">
+      <label>Descrição do Produto</label>
+      <textarea id="sellDesc" rows="3" placeholder="Breve descrição do estado, acessórios, etc."></textarea>
+    </div>
+    <button id="sellSubmit" class="primary full" type="button">🚀 Publicar Anúncio</button>
+  </div>
+</div>
+
+<div class="overlay" id="settingsModal"><div class="modal settings-modal"><button class="close" data-close="settingsModal" type="button">×</button><h2 style="margin-bottom:4px">⚙️ Personalizar EcoShop</h2><p style="font-size:13px;color:var(--muted)">Suas escolhas ficam salvas neste aparelho.</p>
+<div class="settings-section"><h3>🎨 Tema e cores</h3><div class="theme-options">
+<button class="theme-choice" data-theme-choice="green"><i class="theme-dot" style="background:#16a34a"></i>Verde</button><button class="theme-choice" data-theme-choice="blue"><i class="theme-dot" style="background:#2563eb"></i>Azul</button><button class="theme-choice" data-theme-choice="pink"><i class="theme-dot" style="background:#db2777"></i>Rosa</button><button class="theme-choice" data-theme-choice="dark"><i class="theme-dot" style="background:#172235"></i>Escuro</button><button class="theme-choice" data-theme-choice="purple"><i class="theme-dot" style="background:#7c3aed"></i>Roxo</button><button class="theme-choice" data-theme-choice="orange"><i class="theme-dot" style="background:#ea580c"></i>Laranja</button></div></div>
+<div class="settings-section"><h3>🛠️ Aparência e experiência</h3><label class="settings-row"><span>Tamanho do texto</span><select id="settingFont"><option value="14">Pequeno</option><option value="16" selected>Normal</option><option value="18">Grande</option></select></label><label class="settings-row"><span>Modo compacto</span><input id="settingCompact" type="checkbox"></label><label class="settings-row"><span>Reduzir animações</span><input id="settingMotion" type="checkbox"></label><label class="settings-row"><span>Arredondamento dos cards</span><select id="settingCorners"><option value="12px">Discreto</option><option value="18px" selected>Padrão</option><option value="26px">Arredondado</option></select></label></div>
+<div class="settings-section"><h3>🔔 Preferências</h3><label class="settings-row"><span>Mensagens de confirmação</span><input id="settingToasts" type="checkbox" checked></label><label class="settings-row"><span>Ordenação padrão</span><select id="settingSort"><option value="featured">Relevância</option><option value="price-asc">Menor preço</option><option value="rating">Melhor avaliados</option></select></label></div><button id="resetSettings" class="btn-secondary full" type="button">Restaurar configurações padrão</button></div></div>
+<div id="toast" class="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAp_HKCsR63GwYbZKgufXB025ojPUC-bsc",
+  authDomain: "projetodavi-ff2f9.firebaseapp.com",
+  projectId: "projetodavi-ff2f9",
+  storageBucket: "projetodavi-ff2f9.firebasestorage.app",
+  messagingSenderId: "981801744901",
+  appId: "1:981801744901:web:c6856dc76a8d9025c73a6c",
+  measurementId: "G-47EKSCTGZM"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let products = {};
+let cart = [];
+let currentCategory = "Todos";
+let currentRegisterType = "cliente";
+let currentUser = null;
+
+const STORAGE_USERS = "ecoshop_users";
+const STORAGE_SESSION = "ecoshop_session";
+
+const $ = (id) => document.getElementById(id);
+const money = (val) => Number(val || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function toast(msg) {
+  const el = $("toast");
+  if (!el || (localStorage.getItem("ecoshop_preferences") && JSON.parse(localStorage.getItem("ecoshop_preferences")).toasts === false)) return;
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 3000);
+}
+
+function onlyDigits(str) {
+  return String(str || "").replace(/\D/g, "");
+}
+
+function maskCpf(value) {
+  let v = onlyDigits(value).slice(0, 11);
+  if (v.length > 9) return v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+  if (v.length > 6) return v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+  if (v.length > 3) return v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+  return v;
+}
+
+function maskCnpj(value) {
+  let v = onlyDigits(value).slice(0, 14);
+  if (v.length > 12) return v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/, "$1.$2.$3/$4-$5");
+  if (v.length > 8) return v.replace(/(\d{2})(\d{3})(\d{3})(\d{1,4})/, "$1.$2.$3/$4");
+  if (v.length > 5) return v.replace(/(\d{2})(\d{3})(\d{1,3})/, "$1.$2.$3");
+  if (v.length > 2) return v.replace(/(\d{2})(\d{1,3})/, "$1.$2");
+  return v;
+}
+
+function maskCep(value) {
+  let v = onlyDigits(value).slice(0, 8);
+  if (v.length > 5) return v.replace(/(\d{5})(\d{1,3})/, "$1-$2");
+  return v;
+}
+
+function maskPhone(value) {
+  let v = onlyDigits(value).slice(0, 11);
+  if (v.length > 6) return v.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").replace(/-$/, "");
+  if (v.length > 2) return v.replace(/(\d{2})(\d{0,5})/, "($1) $2");
+  if (v.length > 0) return "(" + v;
+  return v;
+}
+
+function isValidCpf(cpf) {
+  const d = onlyDigits(cpf);
+  if (d.length !== 11) return false;
+  if (/^(\d)\1+$/.test(d)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(d.charAt(i), 10) * (10 - i);
+  let rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(d.charAt(9), 10)) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(d.charAt(i), 10) * (11 - i);
+  rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  return rev === parseInt(d.charAt(10), 10);
+}
+
+function markError(el, on) {
+  if (!el) return;
+  if (on) el.classList.add("field-error");
+  else el.classList.remove("field-error");
+}
+
+const SEED_PRODUCTS = {
+  "1": { name: "Notebook EcoBook Pro 14\"", price: 1499.90, oldPrice: 2100.00, category: "Eletrônicos", condition: "Seminovo", rating: 4.8, reviews: 32, image: "https://i.dell.com/is/image/DellContent/content/dam/ss2/product-images/dell-client-products/notebooks/alienware-notebooks/ac16250/media-gallery/laptop-alienware-ac16250-gallery-1.psd?fmt=png-alpha&pscan=auto&scl=1&wid=4353&hei=3586&qlt=100,0&resMode=sharp2&size=4353,3586" },
+  "2": { name: "Tênis Urban Eco Knit", price: 209.90, oldPrice: 299.90, category: "Calçados", condition: "Usado - Excelente", rating: 4.7, reviews: 18, image: "https://assets.hermes.com/is/image/hermesproduct/2710XJZHAA_front_wm_101?wid=1536&hei=2048&qlt=99&$product_default_bg$" },
+  "3": { name: "Controle Wireless Xbox Series", price: 189.90, oldPrice: 350.00, category: "Games", condition: "Seminovo", rating: 4.9, reviews: 45, image: "https://images.unsplash.com/photo-1600080972464-8e5f35f63d08?auto=format&fit=crop&w=900&q=85" },
+  "4": { name: "Bicicleta Urbana Retrô 7V", price: 699.90, oldPrice: 1100.00, category: "Bicicletas", condition: "Usado - Excelente", rating: 4.6, reviews: 12, image: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=900&q=85" },
+  "5": { name: "Monitor Gamer LED 24\" 144Hz", price: 849.00, oldPrice: 1299.00, category: "Eletrônicos", condition: "Seminovo", rating: 4.9, reviews: 28, image: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=900&q=85" },
+  "6": { name: "Jaqueta Jeans Vintage Eco", price: 159.90, oldPrice: 280.00, category: "Outros", condition: "Usado - Bom", rating: 4.5, reviews: 14, image: "https://http2.mlstatic.com/D_NQ_NP_2X_655616-CBT109879134889_032026-F-jaqueta-jeans-vintage-feminina-de-vero-cravejada-de-manga-c.webp" },
+  "7": { name: "Câmera Mirrorless 4K Compacta", price: 2199.00, oldPrice: 3400.00, category: "Eletrônicos", condition: "Seminovo", rating: 5.0, reviews: 9, image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=85" },
+  "8": { name: "Skate Longboard Bamboo Pro", price: 249.90, oldPrice: 420.00, category: "Outros", condition: "Usado - Excelente", rating: 4.8, reviews: 22, image: "https://images.unsplash.com/photo-1547447134-cd3f5c716030?auto=format&fit=crop&w=900&q=85" },
+  "9": { name: "Headset Bluetooth Noise Cancelling", price: 320.00, oldPrice: 580.00, category: "Eletrônicos", condition: "Seminovo", rating: 4.7, reviews: 37, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=85" },
+  "10": { name: "Console Playstation 4 Slim 1TB", price: 1190.00, oldPrice: 1800.00, category: "Games", condition: "Usado - Excelente", rating: 4.8, reviews: 50, image: "https://images.unsplash.com/photo-1507457379470-08b800bebc67?auto=format&fit=crop&w=900&q=85" },
+  "11": { name: "Smartphone EcoTalk 128GB OLED", price: 1899.00, oldPrice: 2800.00, category: "Eletrônicos", condition: "Seminovo", rating: 4.9, reviews: 41, image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=85" },
+  "12": { name: "Violão Acústico Nylon Vintage", price: 380.00, oldPrice: 650.00, category: "Outros", condition: "Usado - Bom", rating: 4.6, reviews: 16, image: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=900&q=85" },
+  "13": { name: "Smartwatch Fitness Pulse HR", price: 299.00, oldPrice: 499.00, category: "Eletrônicos", condition: "Seminovo", rating: 4.7, reviews: 29, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=85" },
+  "14": { name: "Cadeira Ergonômica de Escritório", price: 450.00, oldPrice: 890.00, category: "Outros", condition: "Usado - Excelente", rating: 4.8, reviews: 19, image: "https://homenow.com.br/cdn/shop/files/CadeiraCopenhagePresidente-Frente-CorPreta.webp?v=1784550570" },
+  "15": { name: "Tablet Stylus Pen 10.5\"", price: 920.00, oldPrice: 1450.00, category: "Eletrônicos", condition: "Seminovo", rating: 4.8, reviews: 23, image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=900&q=85" },
+  "16": { name: "Patinete Elétrico Dobrável 250W", price: 1250.00, oldPrice: 1990.00, category: "Bicicletas", condition: "Usado - Excelente", rating: 4.7, reviews: 15, image: "https://images.tcdn.com.br/img/img_prod/394779/patinete_eltrico_250w_dobrvel_drop_go_x06_36v_52ah_1_20260928154804_5feefa29c983.jpg" },
+  "17": { name: "Bota Couro Ecológico Outdoor", price: 289.90, oldPrice: 420.00, category: "Calçados", condition: "Seminovo", rating: 4.9, reviews: 31, image: "https://images.unsplash.com/photo-1520639888713-7851133b1ed0?auto=format&fit=crop&w=900&q=85" },
+  "18": { name: "Jogo Nintendo Switch Legend", price: 210.00, oldPrice: 349.00, category: "Games", condition: "Usado - Excelente", rating: 5.0, reviews: 62, image: "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=900&q=85" },
+  "19": { name: "Caixa de Som Bluetooth Impermeável", price: 179.90, oldPrice: 280.00, category: "Eletrônicos", condition: "Seminovo", rating: 4.6, reviews: 24, image: "https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=900&q=85" },
+  "20": { name: "Teclado Mecânico RGB Switch Red", price: 220.00, oldPrice: 390.00, category: "Eletrônicos", condition: "Usado - Excelente", rating: 4.8, reviews: 19, image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=85" },
+  "21": { name: "Mochila Urbana Reforçada", price: 89.90, oldPrice: 159.90, category: "Outros", condition: "Usado - Excelente", rating: 4.8, reviews: 11, image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=85" },
+  "22": { name: "Tênis Esportivo de Corrida", price: 139.90, oldPrice: 249.90, category: "Calçados", condition: "Seminovo", rating: 4.7, reviews: 17, image: "https://images.puma.com/image/upload/f_auto,q_auto,w_600,b_rgb:FAFAFA/global/312944/14/sv01/fnd/BRA/fmt/png" },
+  "23": { name: "Câmera Fotográfica Compacta", price: 499.90, oldPrice: 799.90, category: "Eletrônicos", condition: "Usado - Excelente", rating: 4.9, reviews: 8, image: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=900&q=85" },
+  "24": { name: "Mouse Gamer RGB", price: 79.90, oldPrice: 129.90, category: "Eletrônicos", condition: "Seminovo", rating: 4.6, reviews: 21, image: "https://images.unsplash.com/photo-1527814050087-3793815479db?auto=format&fit=crop&w=900&q=85" },
+  "25": { name: "Jaqueta Casual Reutilizada", price: 119.90, oldPrice: 219.90, category: "Outros", condition: "Usado - Bom", rating: 4.5, reviews: 13, image: "https://fieroshop.vtexassets.com/arquivos/ids/185259/casaco-masculino-de-moletom-com-gola-slim-preto.jpg?v=638761897595900000" },
+  "26": { name: "Skate Street Completo", price: 189.90, oldPrice: 299.90, category: "Outros", condition: "Usado - Excelente", rating: 4.8, reviews: 16, image: "https://images.unsplash.com/photo-1520045892732-304bc3ac5d8e?auto=format&fit=crop&w=900&q=85" },
+  "27": { name: "Smartwatch Digital", price: 249.90, oldPrice: 399.90, category: "Eletrônicos", condition: "Seminovo", rating: 4.7, reviews: 25, image: "https://br.amazfit.com/cdn/shop/files/Main_Image_2_4c317774-f604-43e3-8d3c-26bc7ee5ad62_4.jpg?v=1772179725&width=416" },
+  "28": { name: "Violão Acústico", price: 329.90, oldPrice: 549.90, category: "Outros", condition: "Usado - Bom", rating: 4.6, reviews: 10, image: "https://acdn-us.mitiendanube.com/stores/008/199/044/products/15228224631_whatsapp20image202023-10-3020at2016-13-05-1-a8b8c2682ef02edc2117886575026862-1024-1024.webp" },
+  "29": { name: 'Smartphone Android 128GB', price: 899.90, oldPrice: 1299.90, category: 'Eletrônicos', condition: 'Usado - Bom', rating: 5.0, reviews: 23, image: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=900&q=85' },
+  "30": { name: 'Fone Bluetooth Compacto', price: 89.90, oldPrice: 149.90, category: 'Eletrônicos', condition: 'Seminovo', rating: 4.5, reviews: 30, image: 'https://m.media-amazon.com/images/I/51JhcDRG6RL._AC_SY300_SX300_QL70_ML2_.jpg' },
+  "31": { name: 'Tablet 10 polegadas', price: 599.90, oldPrice: 899.90, category: 'Eletrônicos', condition: 'Usado - Excelente', rating: 4.6, reviews: 37, image: 'https://images.unsplash.com/photo-1561154464-82e9adf32764?auto=format&fit=crop&w=900&q=85' },
+  "32": { name: 'Impressora Multifuncional', price: 399.90, oldPrice: 599.90, category: 'Eletrônicos', condition: 'Usado - Bom', rating: 4.7, reviews: 44, image: 'https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?auto=format&fit=crop&w=900&q=85' },
+  "33": { name: 'Webcam Full HD', price: 119.90, oldPrice: 189.90, category: 'Eletrônicos', condition: 'Seminovo', rating: 4.8, reviews: 51, image: 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?auto=format&fit=crop&w=900&q=85' },
+  "34": { name: 'Microfone USB para computador', price: 159.90, oldPrice: 249.90, category: 'Eletrônicos', condition: 'Usado - Excelente', rating: 4.9, reviews: 11, image: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=900&q=85' },
+  "35": { name: 'HD Externo 1TB', price: 249.90, oldPrice: 349.90, category: 'Eletrônicos', condition: 'Usado - Bom', rating: 5.0, reviews: 18, image: 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?auto=format&fit=crop&w=900&q=85' },
+  "36": { name: 'SSD 480GB', price: 189.90, oldPrice: 279.90, category: 'Eletrônicos', condition: 'Seminovo', rating: 4.5, reviews: 25, image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=85' },
+  "37": { name: 'Roteador Wi-Fi Dual Band', price: 129.90, oldPrice: 199.90, category: 'Eletrônicos', condition: 'Usado - Excelente', rating: 4.6, reviews: 32, image: 'https://images.kabum.com.br/produtos/fotos/1049981/roteador-wireless-tenda-tx2-pro-gigabit-dual-band-wi-fi-6-quatro-antenas-de-6dbi-ax1500-preto-60019734_1786381535_gg.jpg' },
+  "38": { name: 'Carregador USB-C', price: 39.90, oldPrice: 69.90, category: 'Eletrônicos', condition: 'Usado - Bom', rating: 4.7, reviews: 39, image: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=900&q=85' },
+  "39": { name: 'Capa protetora para celular', price: 24.90, oldPrice: 49.90, category: 'Eletrônicos', condition: 'Seminovo', rating: 4.8, reviews: 46, image: 'https://images.unsplash.com/photo-1601593346740-925612772716?auto=format&fit=crop&w=900&q=85' },
+  "40": { name: 'Ring light de mesa', price: 59.90, oldPrice: 99.90, category: 'Eletrônicos', condition: 'Usado - Excelente', rating: 4.9, reviews: 53, image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=85' },
+  "41": { name: 'Caixa de som portátil', price: 119.90, oldPrice: 189.90, category: 'Eletrônicos', condition: 'Usado - Bom', rating: 5.0, reviews: 13, image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=900&q=85' },
+  "42": { name: 'Projetor compacto', price: 399.90, oldPrice: 599.90, category: 'Eletrônicos', condition: 'Seminovo', rating: 4.5, reviews: 20, image: 'https://acdn-us.mitiendanube.com/stores/007/046/311/products/c4e4de0e54e0ddcf5d332b3c193da692-57f27506557a59750817842224998332-1024-1024.webp' },
+  "43": { name: 'Console portátil retrô', price: 229.90, oldPrice: 349.90, category: 'Games', condition: 'Usado - Excelente', rating: 4.6, reviews: 27, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_687992-MLB115868799772_092026-F-fone-console-portatil-retro-r36s-64gb-pronta-entrega.webp' },
+  "44": { name: 'Controle para videogame', price: 149.90, oldPrice: 229.90, category: 'Games', condition: 'Usado - Bom', rating: 4.7, reviews: 34, image: 'https://down-br.img.susercontent.com/file/br-11134207-7r98o-m4axd7e4ywqd26@resize_w450_nl.webp' },
+  "45": { name: 'Headset gamer com microfone', price: 139.90, oldPrice: 219.90, category: 'Games', condition: 'Seminovo', rating: 4.8, reviews: 41, image: 'https://images.kabum.com.br/produtos/fotos/128544/headset-gamer-razer-blackshark-v2-x-multi-platform-drivers-50mm-rz04-03240100-r3u1_1600956255_gg.jpg' },
+  "46": { name: 'Teclado gamer compacto', price: 119.90, oldPrice: 189.90, category: 'Games', condition: 'Usado - Excelente', rating: 4.9, reviews: 48, image: 'https://levelupshop.com.br/wp-content/uploads/2025/07/teclado-redragon-k530rgb-pt-brown-draconic-abnt2-imagem-2-fundo-preto.webp' },
+  "47": { name: 'Mouse sem fio', price: 49.90, oldPrice: 89.90, category: 'Eletrônicos', condition: 'Usado - Bom', rating: 5.0, reviews: 8, image: 'https://images.kabum.com.br/produtos/fotos/998452/mouse-gamer-sem-fio-razer-basilisk-v3-pro-35k-sensor-35k-dpi-rgb-preto-rz01-05240100_1785443493_gg.jpg' },
+  "48": { name: 'Cadeira gamer usada', price: 499.90, oldPrice: 799.90, category: 'Outros', condition: 'Seminovo', rating: 4.5, reviews: 15, image: 'https://photos.enjoei.com.br/cadeira-gamer-usada-por-3-meses-husky-hailstorm-48209928/828xN/czM6Ly9waG90b3MuZW5qb2VpLmNvbS5ici9wcm9kdWN0cy84NDQ1NzMxL2U4ZTQ0ZThlMzYzYzkwYjlkOGYyMTMzNmViZTBmMjdhLmpwZw' },
+  "49": { name: 'Tênis casual branco', price: 119.90, oldPrice: 199.90, category: 'Calçados', condition: 'Usado - Excelente', rating: 4.6, reviews: 22, image: 'https://cdn.dooca.store/1290/products/tenis-jay-13a-branco-1-q8zrg_620x620+fill_ffffff.jpg?v=1792847408' },
+  "50": { name: 'Tênis de caminhada', price: 139.90, oldPrice: 229.90, category: 'Calçados', condition: 'Usado - Bom', rating: 4.7, reviews: 29, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_629879-MLB114160385059_072026-F-tnis-mizuno-academia-corrida-caminhada-macio-treino-full.webp' },
+  "51": { name: 'Bota casual de couro', price: 189.90, oldPrice: 299.90, category: 'Calçados', condition: 'Seminovo', rating: 4.8, reviews: 36, image: 'https://www.louie.com.br/loja/image/cache/data/colecao-2026/bota-whistler/louie-bota-masculina-whistler-4-550x550.jpg' },
+  "52": { name: 'Sandália confortável', price: 59.90, oldPrice: 99.90, category: 'Calçados', condition: 'Usado - Excelente', rating: 4.9, reviews: 43, image: 'https://images.unsplash.com/photo-1603487742131-4160ec999306?auto=format&fit=crop&w=900&q=85' },
+  "53": { name: 'Sapato social masculino', price: 129.90, oldPrice: 219.90, category: 'Calçados', condition: 'Usado - Bom', rating: 5.0, reviews: 50, image: 'https://www.louie.com.br/loja/image/cache/data/colecao-2024/2%20VITRINE%20novas/louie.derby-barto-preto-vit-2-550x550.jpg' },
+  "54": { name: 'Mochila escolar', price: 69.90, oldPrice: 119.90, category: 'Outros', condition: 'Seminovo', rating: 4.5, reviews: 10, image: 'https://images.unsplash.com/photo-1622560480654-d96214fdc887?auto=format&fit=crop&w=900&q=85' },
+  "55": { name: 'Bolsa transversal', price: 79.90, oldPrice: 139.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.6, reviews: 17, image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=900&q=85' },
+  "56": { name: 'Jaqueta jeans', price: 99.90, oldPrice: 179.90, category: 'Outros', condition: 'Usado - Bom', rating: 4.7, reviews: 24, image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=900&q=85' },
+  "57": { name: 'Camiseta básica reutilizada', price: 29.90, oldPrice: 59.90, category: 'Outros', condition: 'Seminovo', rating: 4.8, reviews: 31, image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85' },
+  "58": { name: 'Moletom confortável', price: 79.90, oldPrice: 139.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.9, reviews: 38, image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85' },
+  "59": { name: 'Calça jeans', price: 69.90, oldPrice: 129.90, category: 'Outros', condition: 'Usado - Bom', rating: 5.0, reviews: 45, image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=900&q=85' },
+  "60": { name: 'Vestido casual', price: 89.90, oldPrice: 159.90, category: 'Outros', condition: 'Seminovo', rating: 4.5, reviews: 52, image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=900&q=85' },
+  "61": { name: 'Relógio de pulso', price: 119.90, oldPrice: 199.90, category: 'Eletrônicos', condition: 'Usado - Excelente', rating: 4.6, reviews: 12, image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&w=900&q=85' },
+  "62": { name: 'Óculos de sol', price: 49.90, oldPrice: 89.90, category: 'Outros', condition: 'Usado - Bom', rating: 4.7, reviews: 19, image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=900&q=85' },
+  "63": { name: 'Boné casual', price: 34.90, oldPrice: 59.90, category: 'Outros', condition: 'Seminovo', rating: 4.8, reviews: 26, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_921527-MLB117713713281_092026-F-bone-liso-aba-curva-basico-ajustavel-adulto-casual-unissex.webp' },
+  "64": { name: 'Bicicleta aro 29', price: 899.90, oldPrice: 1399.90, category: 'Bicicletas', condition: 'Usado - Excelente', rating: 4.9, reviews: 33, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_994240-MLU75949807054_052024-F.webp' },
+  "65": { name: 'Capacete para ciclismo', price: 89.90, oldPrice: 149.90, category: 'Bicicletas', condition: 'Usado - Bom', rating: 5.0, reviews: 40, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_995978-MLA89138365020_082025-F.webp' },
+  "66": { name: 'Acessório para bicicleta', price: 39.90, oldPrice: 79.90, category: 'Bicicletas', condition: 'Seminovo', rating: 4.5, reviews: 47, image: 'https://img.ltwebstatic.com/images3_spmp/2024/05/25/62/171657697714da04cd9668ded7a04fb5fb19c0d0f0_thumbnail_405x.jpg' },
+  "67": { name: 'Patins recreativo', price: 179.90, oldPrice: 279.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.6, reviews: 54, image: 'https://rollerfloripa.com.br/wp-content/uploads/2025/07/Sem-titulo-2025-07-30T163235.627.png' },
+  "68": { name: 'Skate street', price: 139.90, oldPrice: 219.90, category: 'Outros', condition: 'Usado - Bom', rating: 4.7, reviews: 14, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_601492-MLB116463039296_092026-F-skate-completo-dgk-maple-street-importado-montado.webp' },
+  "69": { name: 'Bola de futebol', price: 59.90, oldPrice: 99.90, category: 'Outros', condition: 'Seminovo', rating: 4.8, reviews: 21, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_955497-MLB118352719276_102026-F-bola-futebol-campo-topper-90-cc-oficial--bomba-de-ar.webp' },
+  "70": { name: 'Raquete de tênis', price: 129.90, oldPrice: 199.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.9, reviews: 28, image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?auto=format&fit=crop&w=900&q=85' },
+  "71": { name: 'Mala de viagem', price: 149.90, oldPrice: 249.90, category: 'Outros', condition: 'Usado - Bom', rating: 5.0, reviews: 35, image: 'https://images.unsplash.com/photo-1565026057447-bc90a3dceb87?auto=format&fit=crop&w=900&q=85' },
+  "72": { name: 'Garrafa térmica', price: 39.90, oldPrice: 69.90, category: 'Outros', condition: 'Seminovo', rating: 4.5, reviews: 42, image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=900&q=85' },
+  "73": { name: 'Cafeteira elétrica', price: 99.90, oldPrice: 169.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.6, reviews: 49, image: 'https://dako.vtexassets.com/arquivos/ids/156270-800-800?v=638852591182700000&width=800&height=800&aspect=true' },
+  "74": { name: 'Liquidificador', price: 89.90, oldPrice: 149.90, category: 'Outros', condition: 'Usado - Bom', rating: 4.7, reviews: 9, image: 'https://dako.vtexassets.com/arquivos/ids/156304-800-800?v=638863742452830000&width=800&height=800&aspect=true' },
+  "75": { name: 'Air fryer compacta', price: 249.90, oldPrice: 399.90, category: 'Outros', condition: 'Seminovo', rating: 4.8, reviews: 16, image: 'https://www.drogariaminasbrasil.com.br/media/webp/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/image/93905bb53/fritadeira-eletrica-air-fryer-new-pratic-3-5l-127v-mondial_jpg.webp' },
+  "76": { name: 'Ventilador de mesa', price: 79.90, oldPrice: 129.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.9, reviews: 23, image: 'https://images.kabum.com.br/produtos/fotos/sync_mirakl/315670/xlarge/Ventilador-de-Mesa-Mondial-Super-Power-30cm-3-Velocidades-220V-VSP-30-W_1792006125.jpg' },
+  "77": { name: 'Luminária de mesa', price: 49.90, oldPrice: 89.90, category: 'Outros', condition: 'Usado - Bom', rating: 5.0, reviews: 30, image: 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=900&q=85' },
+  "78": { name: 'Cadeira de escritório', price: 249.90, oldPrice: 399.90, category: 'Outros', condition: 'Seminovo', rating: 4.5, reviews: 37, image: 'https://homenow.com.br/cdn/shop/files/Oslo-Presidente-Preto.webp?v=1791902105&width=1280' },
+  "79": { name: 'Mesa de apoio', price: 119.90, oldPrice: 199.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.6, reviews: 44, image: 'https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?auto=format&fit=crop&w=900&q=85' },
+  "80": { name: 'Prateleira de madeira', price: 79.90, oldPrice: 139.90, category: 'Outros', condition: 'Usado - Bom', rating: 4.7, reviews: 51, image: 'https://images.unsplash.com/photo-1594620302200-9a762244a156?auto=format&fit=crop&w=900&q=85' },
+  "81": { name: 'Vaso decorativo', price: 29.90, oldPrice: 59.90, category: 'Outros', condition: 'Seminovo', rating: 4.8, reviews: 11, image: 'https://images.unsplash.com/photo-1578500494198-246f612d3b3d?auto=format&fit=crop&w=900&q=85' },
+  "82": { name: 'Luminária decorativa', price: 69.90, oldPrice: 119.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.9, reviews: 18, image: 'https://kazadec.com/cdn/shop/files/005Nordic9.jpg?v=1776435059&width=600' },
+  "83": { name: 'Panela antiaderente', price: 59.90, oldPrice: 99.90, category: 'Outros', condition: 'Usado - Bom', rating: 5.0, reviews: 25, image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=900&q=85' },
+  "84": { name: 'Jogo de pratos', price: 79.90, oldPrice: 129.90, category: 'Outros', condition: 'Seminovo', rating: 4.5, reviews: 32, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_807143-MLA114665736920_082026-F.webp' },
+  "85": { name: 'Manta para sofá', price: 49.90, oldPrice: 89.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.6, reviews: 39, image: 'https://3a36cfaa62ac8ba9.cdn.gocache.net/images/produtos/aconchego_rosa_velho_2021_1_20210324__g.jpg' },
+  "86": { name: 'Almofada decorativa', price: 24.90, oldPrice: 49.90, category: 'Outros', condition: 'Usado - Bom', rating: 4.7, reviews: 46, image: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=900&q=85' },
+  "87": { name: 'Livro de literatura', price: 19.90, oldPrice: 39.90, category: 'Outros', condition: 'Seminovo', rating: 4.8, reviews: 53, image: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=900&q=85' },
+  "88": { name: 'Caderno universitário', price: 14.90, oldPrice: 29.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.9, reviews: 13, image: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=900&q=85' },
+  "89": { name: 'Estojo escolar', price: 19.90, oldPrice: 39.90, category: 'Outros', condition: 'Usado - Bom', rating: 5.0, reviews: 20, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_834409-MLB115606639435_082026-F-estojo-escolar-infantil-one-piece-2-compartimentos-grande.webp' },
+  "90": { name: 'Brinquedo educativo', price: 39.90, oldPrice: 79.90, category: 'Outros', condition: 'Seminovo', rating: 4.5, reviews: 27, image: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=900&q=85' },
+  "91": { name: 'Quebra-cabeça', price: 29.90, oldPrice: 59.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.6, reviews: 34, image: 'https://down-br.img.susercontent.com/file/sg-11134201-825ad-mg9h8cb504js83_tn' },
+  "92": { name: 'Boneco colecionável', price: 49.90, oldPrice: 89.90, category: 'Outros', condition: 'Usado - Bom', rating: 4.7, reviews: 41, image: 'https://images.unsplash.com/photo-1608889175123-8ee362201f81?auto=format&fit=crop&w=900&q=85' },
+  "93": { name: 'Violão acústico', price: 299.90, oldPrice: 449.90, category: 'Outros', condition: 'Seminovo', rating: 4.8, reviews: 48, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_663278-MLA95125538209_102025-F.webp' },
+  "94": { name: 'Ukulele', price: 129.90, oldPrice: 199.90, category: 'Outros', condition: 'Usado - Excelente', rating: 4.9, reviews: 8, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_917765-MLA116376615661_082026-F.webp' },
+  "95": { name: 'Teclado musical', price: 349.90, oldPrice: 549.90, category: 'Outros', condition: 'Usado - Bom', rating: 5.0, reviews: 15, image: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&w=900&q=85' },
+  "96": { name: 'Fone com fio', price: 19.90, oldPrice: 39.90, category: 'Eletrônicos', condition: 'Seminovo', rating: 4.5, reviews: 22, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_889838-MLA96708528891_102025-F.webp' },
+  "97": { name: 'Carregador portátil power bank', price: 69.90, oldPrice: 119.90, category: 'Eletrônicos', condition: 'Usado - Excelente', rating: 4.6, reviews: 29, image: 'https://images.kabum.com.br/produtos/fotos/103657/carregador-portatil-universal-geonav-10000-mah-preto-pb10kbk_1587066693_gg.jpg' },
+  "98": { name: 'Suporte para notebook', price: 59.90, oldPrice: 99.90, category: 'Eletrônicos', condition: 'Usado - Bom', rating: 4.7, reviews: 36, image: 'https://loja.elements.com.br/cdn/shop/files/onix-preto-frente.jpg?v=1793755082&width=650' },
+  "99": { name: 'Monitor LED 21 polegadas', price: 399.90, oldPrice: 599.90, category: 'Eletrônicos', condition: 'Seminovo', rating: 4.8, reviews: 43, image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=85' },
+  "100": { name: 'Câmera de ação compacta', price: 299.90, oldPrice: 499.90, category: 'Eletrônicos', condition: 'Usado - Excelente', rating: 4.9, reviews: 50, image: 'https://http2.mlstatic.com/D_NQ_NP_2X_853997-MLA99870127093_112025-F.webp' }
+};
+
+async function seedIfEmpty() {
+  try {
+    // Adiciona apenas os anúncios de demonstração ausentes; preserva anúncios existentes.
+    const batch = db.batch(); let pending = 0;
+    for (const [id, p] of Object.entries(SEED_PRODUCTS)) {
+      const ref = db.collection("products").doc(id);
+      const existing = await ref.get();
+      if (!existing.exists) { batch.set(ref, { ...p, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); pending++; }
+      else if (existing.data() && existing.data().name === p.name && existing.data().image !== p.image) {
+        // Corrige somente a foto dos produtos de demonstração; mantém preço e demais dados editados.
+        batch.update(ref, { image: p.image }); pending++;
+      }
+    }
+    if (pending) await batch.commit();
+  } catch (err) { console.error("Seed error:", err); }
+}
+
+function listenProducts() {
+  db.collection("products").onSnapshot(snap => {
+    products = {};
+    snap.forEach(doc => {
+      products[doc.id] = { id: doc.id, ...doc.data() };
+    });
+    const countEl = $("heroProductCount");
+    if (countEl) countEl.textContent = "+" + Object.keys(products).length + " Produtos";
+    renderProducts(currentCategory, ($("search") || {}).value || "", ($("sortSelect") || {}).value || "featured");
+  }, err => {
+    console.error(err);
+    const grid = $("productsGrid");
+    if (grid) grid.innerHTML = `<p class="loading" style="color:#991b1b;">Erro ao carregar produtos. Verifique a conexão e as regras do Firestore.</p>`;
+  });
+}
+
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_USERS) || "[]"); }
+  catch { return []; }
+}
+function saveUsers(list) {
+  localStorage.setItem(STORAGE_USERS, JSON.stringify(list));
+}
+function getSession() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_SESSION) || "null"); }
+  catch { return null; }
+}
+function setSession(user) {
+  if (user) localStorage.setItem(STORAGE_SESSION, JSON.stringify(user));
+  else localStorage.removeItem(STORAGE_SESSION);
+  currentUser = user;
+  updateLoginButton();
+}
+function updateLoginButton() {
+  const btn = $("loginBtn");
+  if (!btn) return;
+  if (currentUser) btn.textContent = "👤 " + (currentUser.name || "Minha Conta").split(" ")[0];
+  else btn.textContent = "👤 Entrar";
+}
+
+function safeImage(url) { return String(url || "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=900&q=80"); }
+function imageError(img) {
+  if (img.dataset.fallbackDone) { img.onerror = null; img.src = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="100%" height="100%" fill="#e2e8f0"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-family="Arial" font-size="26">Imagem indisponível</text></svg>'); return; }
+  img.dataset.fallbackDone = "1"; img.src = "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=900&q=80";
+}
+
+function getProductDescription(p) {
+  if (p.desc && String(p.desc).trim()) return String(p.desc).trim();
+  const condText = {
+    "Seminovo": "Item seminovo, em ótimo estado de conservação, com sinais mínimos de uso.",
+    "Usado - Excelente": "Produto usado em excelente estado. Funciona perfeitamente e apresenta poucos sinais de desgaste.",
+    "Usado - Bom": "Produto usado em bom estado de funcionamento. Pode apresentar marcas leves de uso."
+  };
+  const catText = {
+    "Eletrônicos": "Equipamento eletrônico revisado e testado.",
+    "Calçados": "Calçado selecionado para o marketplace sustentável.",
+    "Games": "Item gamer conferido e funcional.",
+    "Bicicletas": "Meio de transporte sustentável e econômico.",
+    "Outros": "Produto reutilizado com cuidado."
+  };
+  return (condText[p.condition] || "Produto em bom estado.") + " " + (catText[p.category] || "") + " Ao comprar no EcoShop você dá uma segunda vida a este item.";
+}
+
+function openProductDetail(id) {
+  const p = products[id];
+  if (!p) return;
+  const discount = p.oldPrice ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
+  const content = $("productDetailContent");
+  if (!content) return;
+  content.innerHTML = `
+    <img class="product-detail-img" src="${safeImage(p.image)}" alt="${p.name || "Produto EcoShop"}" onerror="imageError(this)">
+    <div class="product-detail-info">
+      <h2>${p.name || ""}</h2>
+      <div class="product-detail-meta">
+        <span class="cond">${p.condition || ""}</span>
+        <span class="cat">${p.category || ""}</span>
+        <span>★ ${p.rating || 5} (${p.reviews || 0} avaliações)</span>
+        ${p.sellerName ? `<span>🏪 ${p.sellerName}</span>` : ""}
+      </div>
+      <p class="product-detail-desc">${getProductDescription(p)}</p>
+      <div class="product-detail-prices">
+        <div class="price">${money(p.price)}</div>
+        ${p.oldPrice ? `<div class="old-price">${money(p.oldPrice)}</div>` : ""}
+        ${discount > 0 ? `<span style="font-size:13px;font-weight:700;color:#16a34a;background:#dcfce7;padding:3px 8px;border-radius:8px;">-${discount}%</span>` : ""}
+      </div>
+      <button class="primary full" id="detailAddBtn" type="button">🛒 Adicionar ao Carrinho</button>
+    </div>
+    <section class="review-area"><h3>⭐ Avaliações de clientes</h3><div class="review-form">
+      <strong>Conte como foi sua experiência</strong><p style="font-size:12px;color:var(--muted);margin-top:3px">Entre na sua conta de cliente para avaliar este produto.</p>
+      <div class="star-picker" id="reviewStars"><button type="button" data-star="1">★</button><button type="button" data-star="2">★</button><button type="button" data-star="3">★</button><button type="button" data-star="4">★</button><button type="button" data-star="5">★</button></div>
+      <textarea id="reviewText" rows="2" placeholder="Escreva sua avaliação (opcional)"></textarea><button id="sendReviewBtn" class="primary full" type="button">Enviar avaliação</button>
+    </div><div id="reviewList" class="review-list"><p style="color:var(--muted);font-size:13px">Carregando avaliações...</p></div></section>`;
+  const addBtn = $("detailAddBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", () => {
+      addToCart(id);
+      $("productModal").classList.remove("show");
+    });
+  }
+  selectedReviewStars = 5;
+  document.querySelectorAll("#reviewStars [data-star]").forEach(b => { b.style.opacity = Number(b.dataset.star) <= selectedReviewStars ? "1" : ".35"; b.onclick = () => { selectedReviewStars = Number(b.dataset.star); document.querySelectorAll("#reviewStars [data-star]").forEach(x => x.style.opacity = Number(x.dataset.star) <= selectedReviewStars ? "1" : ".35"); }; });
+  const sendReview = $("sendReviewBtn");
+  if (sendReview) sendReview.onclick = async () => {
+    if (!currentUser || currentUser.type !== "cliente") { toast("Entre em uma conta de cliente para avaliar."); $("loginModal").classList.add("show"); return; }
+    sendReview.disabled = true;
+    try {
+      const ref = db.collection("products").doc(id).collection("reviews").doc(currentUser.email.replace(/[^a-z0-9]/gi,"_"));
+      await ref.set({ name: currentUser.name || "Cliente", email: currentUser.email, stars: selectedReviewStars, comment: ($("reviewText").value || "").trim().slice(0,500), createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      const all = await db.collection("products").doc(id).collection("reviews").get();
+      let total = 0; all.forEach(d => total += Number(d.data().stars || 5));
+      await db.collection("products").doc(id).update({ rating: Number((total / all.size).toFixed(1)), reviews: all.size });
+      $("reviewText").value = ""; toast("Obrigado! Sua avaliação foi publicada."); loadProductReviews(id);
+    } catch (err) { console.error(err); toast("Não foi possível publicar. Confira as regras do Firestore."); }
+    finally { sendReview.disabled = false; }
+  };
+  loadProductReviews(id);
+  $("productModal").classList.add("show");
+}
+
+let selectedReviewStars = 5;
+function loadProductReviews(productId) {
+  const list = $("reviewList"); if (!list) return;
+  db.collection("products").doc(productId).collection("reviews").orderBy("createdAt", "desc").limit(20).get().then(snapshot => {
+    if (snapshot.empty) { list.innerHTML = '<p style="font-size:13px;color:var(--muted)">Ainda não há avaliações. Seja o primeiro a avaliar!</p>'; return; }
+    list.innerHTML = snapshot.docs.map(doc => { const r=doc.data(), n=Math.max(1,Math.min(5,Number(r.stars||5))); const date=r.createdAt&&r.createdAt.toDate?r.createdAt.toDate().toLocaleDateString("pt-BR"):"Recentemente"; return `<article class="review-item"><strong>${String(r.name||"Cliente EcoShop").replace(/[<>]/g,"")}</strong> <span style="color:#f59e0b">${"★".repeat(n)}${"☆".repeat(5-n)}</span><small style="float:right;color:var(--muted)">${date}</small><p>${String(r.comment||"Avaliação sem comentário.").replace(/[<>]/g,"")}</p></article>`; }).join("");
+  }).catch(err=>{console.error(err);list.innerHTML='<p style="font-size:13px;color:var(--muted)">Não foi possível carregar as avaliações.</p>';});
+}
+
+function getCartCount() { return cart.reduce((s, i) => s + i.qty, 0); }
+function updateCartBadge() {
+  const el = $("cartCount");
+  if (el) el.textContent = String(getCartCount());
+}
+function addToCart(id) {
+  if (!products[id]) { toast("Produto não encontrado."); return; }
+  const existing = cart.find(i => i.id === id);
+  if (existing) existing.qty += 1;
+  else cart.push({ id, qty: 1 });
+  updateCartBadge();
+  toast("✅ Adicionado ao carrinho!");
+}
+function changeQty(id, delta) {
+  const item = cart.find(i => i.id === id);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
+  updateCartBadge();
+  renderCart();
+}
+function removeFromCart(id) {
+  cart = cart.filter(i => i.id !== id);
+  updateCartBadge();
+  renderCart();
+  toast("Item removido do carrinho");
+}
+function getCartTotal() {
+  return cart.reduce((sum, item) => {
+    const p = products[item.id];
+    return sum + (p ? Number(p.price) * item.qty : 0);
+  }, 0);
+}
+function renderCart() {
+  const container = $("cartItems");
+  const summary = $("cartSummary");
+  if (!container || !summary) return;
+
+  if (cart.length === 0) {
+    container.innerHTML = `<div class="cart-empty"><span>🛒</span><p>Seu carrinho está vazio.</p></div>`;
+    summary.style.display = "none";
+    return;
+  }
+
+  container.innerHTML = cart.map(item => {
+    const p = products[item.id];
+    if (!p) return "";
+    return `
+      <div class="cart-item">
+        <img src="${p.image || ""}" alt="" onerror="this.src='https://via.placeholder.com/70x70?text=Foto'">
+        <div class="cart-item-info">
+          <h4>${p.name || ""}</h4>
+          <div class="cart-price">${money(p.price)}</div>
+        </div>
+        <div class="qty-controls">
+          <button class="qty-btn" type="button" data-qty="${item.id}" data-delta="-1">−</button>
+          <span class="qty-value">${item.qty}</span>
+          <button class="qty-btn" type="button" data-qty="${item.id}" data-delta="1">+</button>
+        </div>
+        <button class="btn-remove" type="button" data-remove="${item.id}">Remover</button>
+      </div>`;
+  }).join("");
+
+  container.querySelectorAll("[data-qty]").forEach(btn => {
+    btn.addEventListener("click", () => changeQty(btn.dataset.qty, parseInt(btn.dataset.delta, 10)));
+  });
+  container.querySelectorAll("[data-remove]").forEach(btn => {
+    btn.addEventListener("click", () => removeFromCart(btn.dataset.remove));
+  });
+
+  const totalEl = $("cartTotal");
+  if (totalEl) totalEl.textContent = money(getCartTotal());
+  summary.style.display = "block";
+}
+
+function bindMask(id, maskFn) {
+  const el = $(id);
+  if (!el) return;
+  el.addEventListener("input", function () {
+    this.value = maskFn(this.value);
+    try { this.setSelectionRange(this.value.length, this.value.length); } catch (_) {}
+  });
+}
+
+bindMask("payCpf", maskCpf);
+bindMask("payCep", maskCep);
+bindMask("regPhone", maskPhone);
+
+const regDocEl = $("regDoc");
+if (regDocEl) {
+  regDocEl.addEventListener("input", function () {
+    if (currentRegisterType === "vendedor") this.value = maskCnpj(this.value);
+    else this.value = maskCpf(this.value);
+  });
+}
+
+/* Preview da imagem no formulário de venda */
+const sellImageEl = $("sellImage");
+if (sellImageEl) {
+  sellImageEl.addEventListener("input", function () {
+    const url = this.value.trim();
+    const prev = $("sellImgPreview");
+    if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
+      prev.src = url;
+      prev.style.display = "block";
+      prev.onerror = () => { prev.style.display = "none"; };
+    } else {
+      prev.style.display = "none";
+    }
+  });
+}
+
+$("cartBtn").addEventListener("click", () => {
+  $("cartStepItems").style.display = "block";
+  $("cartStepPayment").style.display = "none";
+  renderCart();
+  $("cartModal").classList.add("show");
+});
+
+$("checkoutBtn").addEventListener("click", () => {
+  if (cart.length === 0) return;
+  $("payTotal").textContent = money(getCartTotal());
+  if (currentUser) {
+    if ($("payName") && !$("payName").value) $("payName").value = currentUser.name || "";
+    if ($("payCpf") && !$("payCpf").value && currentUser.doc) $("payCpf").value = maskCpf(currentUser.doc);
+  }
+  $("cartStepItems").style.display = "none";
+  $("cartStepPayment").style.display = "block";
+});
+
+$("backToCartBtn").addEventListener("click", () => {
+  $("cartStepPayment").style.display = "none";
+  $("cartStepItems").style.display = "block";
+});
+
+$("confirmPayBtn").addEventListener("click", async () => {
+  const nomeEl = $("payName");
+  const cpfEl = $("payCpf");
+  const cepEl = $("payCep");
+  const endEl = $("payAddress");
+  const metEl = $("payMethod");
+
+  const nome = (nomeEl && nomeEl.value || "").trim();
+  const cpfRaw = (cpfEl && cpfEl.value || "").trim();
+  const cepRaw = (cepEl && cepEl.value || "").trim();
+  const endereco = (endEl && endEl.value || "").trim();
+  const metodo = (metEl && metEl.value || "").trim();
+  const numero = (($("payNumber") && $("payNumber").value) || "").trim();
+
+  markError(nomeEl, false);
+  markError(cpfEl, false);
+  markError(cepEl, false);
+  markError(endEl, false);
+  markError(metEl, false);
+
+  let ok = true;
+  if (!nome) { markError(nomeEl, true); ok = false; }
+  if (!cpfRaw) { markError(cpfEl, true); ok = false; }
+  if (!cepRaw) { markError(cepEl, true); ok = false; }
+  if (!endereco) { markError(endEl, true); ok = false; }
+  if (!metodo) { markError(metEl, true); ok = false; }
+
+  if (!ok) {
+    toast("⚠️ Preencha todos os campos obrigatórios!");
+    return;
+  }
+
+  const cpfDigits = onlyDigits(cpfRaw);
+  if (cpfDigits.length !== 11) {
+    markError(cpfEl, true);
+    toast("⚠️ CPF inválido. Digite os 11 dígitos.");
+    return;
+  }
+  if (!isValidCpf(cpfDigits)) {
+    markError(cpfEl, true);
+    toast("⚠️ CPF inválido. Verifique os números digitados.");
+    return;
+  }
+
+  const cepDigits = onlyDigits(cepRaw);
+  if (cepDigits.length !== 8) {
+    markError(cepEl, true);
+    toast("⚠️ CEP inválido. Digite os 8 dígitos.");
+    return;
+  }
+
+  const totalNum = getCartTotal();
+  const total = money(totalNum);
+  const count = getCartCount();
+  const orderId = "PED-" + Date.now().toString().slice(-8);
+  const cpfFmt = maskCpf(cpfDigits);
+  const enderecoFull = numero ? endereco + ", nº " + numero : endereco;
+
+  const items = cart.map(item => {
+    const p = products[item.id];
+    return { productId: item.id, name: (p && p.name) || "", price: (p && p.price) || 0, qty: item.qty };
+  });
+
+  $("confirmPayBtn").disabled = true;
+  $("confirmPayBtn").textContent = "Salvando...";
+
+  try {
+    await db.collection("orders").doc(orderId).set({
+      id: "#" + orderId,
+      cliente: nome,
+      cpf: cpfFmt,
+      cep: maskCep(cepDigits),
+      endereco: enderecoFull,
+      vendedor: "EcoShop Marketplace",
+      valor: total,
+      valorNum: totalNum,
+      pagamento: metodo,
+      data: new Date().toLocaleDateString("pt-BR"),
+      items,
+      status: "confirmado",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    const clientRef = db.collection("clients").doc(cpfDigits);
+    const clientSnap = await clientRef.get();
+    if (!clientSnap.exists) {
+      await clientRef.set({
+        nome,
+        email: (currentUser && currentUser.email) || (nome.toLowerCase().replace(/\s+/g, ".") + "@email.com"),
+        cpf: cpfFmt,
+        fone: (currentUser && currentUser.phone) || "",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    cart = [];
+    updateCartBadge();
+    if (nomeEl) nomeEl.value = "";
+    if (cpfEl) cpfEl.value = "";
+    if (cepEl) cepEl.value = "";
+    if ($("payNumber")) $("payNumber").value = "";
+    if (endEl) endEl.value = "";
+    if (metEl) metEl.value = "";
+
+    $("cartStepPayment").style.display = "none";
+    $("cartStepItems").style.display = "block";
+    renderCart();
+    $("cartModal").classList.remove("show");
+    toast("🎉 Pedido #" + orderId + " confirmado! " + count + " item(ns) — " + total + " via " + metodo);
+  } catch (err) {
+    console.error(err);
+    toast("❌ Erro ao salvar pedido. Verifique as regras do Firestore.");
+  } finally {
+    $("confirmPayBtn").disabled = false;
+    $("confirmPayBtn").textContent = "✅ Confirmar Compra";
+  }
+});
+
+$("tabLogin").addEventListener("click", () => {
+  $("tabLogin").classList.add("active");
+  $("tabRegister").classList.remove("active");
+  $("panelLogin").style.display = "block";
+  $("panelRegister").style.display = "none";
+});
+$("tabRegister").addEventListener("click", () => {
+  $("tabRegister").classList.add("active");
+  $("tabLogin").classList.remove("active");
+  $("panelRegister").style.display = "block";
+  $("panelLogin").style.display = "none";
+});
+
+document.querySelectorAll("[data-register-type]").forEach(opt => {
+  opt.addEventListener("click", () => {
+    document.querySelectorAll("[data-register-type]").forEach(x => x.classList.remove("active"));
+    opt.classList.add("active");
+    currentRegisterType = opt.dataset.registerType;
+    const label = $("regDocLabel");
+    const input = $("regDoc");
+    if (currentRegisterType === "vendedor") {
+      if (label) label.textContent = "CNPJ *";
+      if (input) { input.placeholder = "00.000.000/0000-00"; input.maxLength = 18; input.value = maskCnpj(input.value); }
+    } else {
+      if (label) label.textContent = "CPF *";
+      if (input) { input.placeholder = "000.000.000-00"; input.maxLength = 14; input.value = maskCpf(input.value); }
+    }
+  });
+});
+
+$("loginSubmit").addEventListener("click", () => {
+  const email = (($("loginEmail") && $("loginEmail").value) || "").trim().toLowerCase();
+  const senha = (($("loginPassword") && $("loginPassword").value) || "").trim();
+  if (!email || !senha) { toast("Preencha e-mail e senha!"); return; }
+
+  const users = getUsers();
+  const user = users.find(u => u.email === email && u.senha === senha);
+  if (!user) {
+    toast("E-mail ou senha incorretos. Crie uma conta se ainda não tiver.");
+    return;
+  }
+  setSession({ name: user.name, email: user.email, doc: user.doc, phone: user.phone, type: user.type });
+  toast("Bem-vindo(a), " + user.name.split(" ")[0] + "!");
+  $("loginModal").classList.remove("show");
+});
+
+$("regSubmit").addEventListener("click", async () => {
+  const name = (($("regName") && $("regName").value) || "").trim();
+  const email = (($("regEmail") && $("regEmail").value) || "").trim().toLowerCase();
+  const docRaw = (($("regDoc") && $("regDoc").value) || "").trim();
+  const phone = (($("regPhone") && $("regPhone").value) || "").trim();
+  const senha = (($("regPassword") && $("regPassword").value) || "").trim();
+
+  markError($("regName"), false);
+  markError($("regEmail"), false);
+  markError($("regDoc"), false);
+  markError($("regPhone"), false);
+  markError($("regPassword"), false);
+
+  let ok = true;
+  if (!name) { markError($("regName"), true); ok = false; }
+  if (!email || !email.includes("@")) { markError($("regEmail"), true); ok = false; }
+  if (!docRaw) { markError($("regDoc"), true); ok = false; }
+  if (!phone) { markError($("regPhone"), true); ok = false; }
+  if (!senha || senha.length < 4) { markError($("regPassword"), true); ok = false; }
+  if (!ok) { toast("Preencha todos os campos obrigatórios!"); return; }
+
+  const digits = onlyDigits(docRaw);
+  if (currentRegisterType === "cliente") {
+    if (digits.length !== 11 || !isValidCpf(digits)) {
+      markError($("regDoc"), true);
+      toast("⚠️ CPF inválido. Verifique os 11 dígitos.");
+      return;
+    }
+  } else {
+    if (digits.length !== 14) {
+      markError($("regDoc"), true);
+      toast("⚠️ CNPJ inválido. Digite os 14 dígitos.");
+      return;
+    }
+  }
+
+  if (onlyDigits(phone).length < 10) {
+    markError($("regPhone"), true);
+    toast("⚠️ Telefone inválido.");
+    return;
+  }
+
+  const users = getUsers();
+  if (users.some(u => u.email === email)) {
+    toast("Este e-mail já está cadastrado. Use a aba Entrar.");
+    return;
+  }
+
+  const docFmt = currentRegisterType === "vendedor" ? maskCnpj(digits) : maskCpf(digits);
+  const newUser = {
+    name, email, senha,
+    doc: docFmt,
+    phone: maskPhone(phone),
+    type: currentRegisterType
+  };
+  users.push(newUser);
+  saveUsers(users);
+
+  try {
+    if (currentRegisterType === "cliente") {
+      await db.collection("clients").doc(digits).set({
+        nome: name,
+        email,
+        cpf: docFmt,
+        fone: maskPhone(phone),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    } else {
+      await db.collection("sellers").doc(digits).set({
+        nome: name,
+        email,
+        doc: docFmt,
+        fone: maskPhone(phone),
+        totalVendas: "R$ 0,00",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+  } catch (err) {
+    console.error("Erro ao salvar usuário no Firebase:", err);
+  }
+
+  setSession({ name, email, doc: docFmt, phone: maskPhone(phone), type: currentRegisterType });
+  toast("Conta criada com sucesso para " + name.split(" ")[0] + "!");
+  $("loginModal").classList.remove("show");
+  ["regName","regEmail","regDoc","regPhone","regPassword"].forEach(id => { if ($(id)) $(id).value = ""; });
+});
+
+$("loginBtn").addEventListener("click", () => {
+  if (currentUser) {
+    if (confirm("Deseja sair da conta " + currentUser.name + "?")) {
+      setSession(null);
+      toast("Você saiu da conta.");
+    }
+  } else {
+    $("loginModal").classList.add("show");
+  }
+});
+
+function renderProducts(filterCategory, searchTerm, sortOption) {
+  const grid = $("productsGrid");
+  if (!grid) return;
+
+  let keys = Object.keys(products).filter(id => {
+    const p = products[id];
+    const matchesCategory = filterCategory === "Todos" || p.category === filterCategory;
+    const matchesSearch = String(p.name || "").toLowerCase().includes(String(searchTerm || "").toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  if (sortOption === "price-asc") keys.sort((a, b) => (products[a].price || 0) - (products[b].price || 0));
+  else if (sortOption === "price-desc") keys.sort((a, b) => (products[b].price || 0) - (products[a].price || 0));
+  else if (sortOption === "rating") keys.sort((a, b) => (products[b].rating || 0) - (products[a].rating || 0));
+
+  if (keys.length === 0) {
+    grid.innerHTML = `<p class="loading">Nenhum produto encontrado.</p>`;
+    return;
+  }
+
+  grid.innerHTML = keys.map(id => {
+    const p = products[id];
+    return `
+      <div class="card">
+        <div class="img-container" data-detail="${id}">
+          <img class="product-image" src="${safeImage(p.image)}" alt="${p.name || "Produto EcoShop"}" onerror="imageError(this)">
+          <span class="tag-condition">${p.condition || ""}</span>
+        </div>
+        <div class="card-body">
+          <h3>${p.name || ""}</h3>
+          <div class="rating">★ ${p.rating || 5} <span>(${p.reviews || 0})</span></div>
+          <div class="price-row">
+            <div class="price">${money(p.price)}</div>
+            ${p.oldPrice ? `<div class="old-price">${money(p.oldPrice)}</div>` : ""}
+          </div>
+        </div>
+        <div class="actions">
+          <button class="primary add" type="button" data-add="${id}">🛒 Adicionar</button>
+        </div>
+      </div>`;
+  }).join("");
+
+  grid.querySelectorAll("[data-add]").forEach(btn => {
+    btn.addEventListener("click", (e) => { e.stopPropagation(); addToCart(btn.dataset.add); });
+  });
+  grid.querySelectorAll("[data-detail]").forEach(el => {
+    el.addEventListener("click", (e) => { e.stopPropagation(); openProductDetail(el.dataset.detail); });
+  });
+}
+
+document.querySelectorAll(".category").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".category").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentCategory = btn.dataset.category;
+    renderProducts(currentCategory, ($("search") || {}).value || "", ($("sortSelect") || {}).value || "featured");
+  });
+});
+$("search").addEventListener("input", (e) => {
+  renderProducts(currentCategory, e.target.value, ($("sortSelect") || {}).value || "featured");
+});
+$("sortSelect").addEventListener("change", (e) => {
+  renderProducts(currentCategory, ($("search") || {}).value || "", e.target.value);
+});
+
+const DEFAULT_SELL_IMAGES = {
+  "Eletrônicos": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=85",
+  "Calçados": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=85",
+  "Games": "https://images.unsplash.com/photo-1600080972464-8e5f35f63d08?auto=format&fit=crop&w=900&q=85",
+  "Bicicletas": "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=900&q=85",
+  "Outros": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=85"
+};
+
+$("sellBtn").addEventListener("click", () => {
+  if (!currentUser) {
+    toast("⚠️ Faça login como vendedor para anunciar produtos.");
+    $("loginModal").classList.add("show");
+    $("tabRegister").click();
+    document.querySelector('[data-register-type="vendedor"]').click();
+    return;
+  }
+  if (currentUser.type !== "vendedor") {
+    toast("⚠️ Apenas contas de vendedor podem anunciar. Crie uma conta de vendedor.");
+    return;
+  }
+  $("sellHint").textContent = "Logado como: " + currentUser.name + ". O anúncio e a foto vão para o banco de dados e aparecem na vitrine imediatamente.";
+  $("sellModal").classList.add("show");
+});
+
+$("sellSubmit").addEventListener("click", async () => {
+  if (!currentUser || currentUser.type !== "vendedor") {
+    toast("⚠️ Você precisa estar logado como vendedor.");
+    return;
+  }
+
+  const name = (($("sellName") && $("sellName").value) || "").trim();
+  const category = (($("sellCategory") && $("sellCategory").value) || "").trim();
+  const condition = (($("sellCondition") && $("sellCondition").value) || "").trim();
+  const price = parseFloat(($("sellPrice") && $("sellPrice").value) || "");
+  const oldPriceRaw = parseFloat(($("sellOldPrice") && $("sellOldPrice").value) || "");
+  const image = (($("sellImage") && $("sellImage").value) || "").trim();
+  const desc = (($("sellDesc") && $("sellDesc").value) || "").trim();
+
+  markError($("sellName"), false);
+  markError($("sellCategory"), false);
+  markError($("sellCondition"), false);
+  markError($("sellPrice"), false);
+  markError($("sellImage"), false);
+
+  let ok = true;
+  if (!name) { markError($("sellName"), true); ok = false; }
+  if (!category) { markError($("sellCategory"), true); ok = false; }
+  if (!condition) { markError($("sellCondition"), true); ok = false; }
+  if (!price || price <= 0 || isNaN(price)) { markError($("sellPrice"), true); ok = false; }
+  if (!image || !(image.startsWith("http://") || image.startsWith("https://"))) {
+    markError($("sellImage"), true);
+    ok = false;
+  }
+
+  if (!ok) {
+    toast("⚠️ Preencha nome, categoria, condição, preço e uma URL de imagem válida (começando com https://)!");
+    return;
+  }
+
+  const oldPrice = (!isNaN(oldPriceRaw) && oldPriceRaw > price) ? oldPriceRaw : Math.round(price * 1.4 * 100) / 100;
+  const newId = "p" + Date.now();
+
+  $("sellSubmit").disabled = true;
+  $("sellSubmit").textContent = "Publicando...";
+
+  try {
+    await db.collection("products").doc(newId).set({
+      name,
+      price,
+      oldPrice,
+      category,
+      condition,
+      rating: 5.0,
+      reviews: 0,
+      image: image,
+      desc: desc || "",
+      sellerName: currentUser.name || "",
+      sellerEmail: currentUser.email || "",
+      sellerDoc: currentUser.doc || "",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    ["sellName","sellCategory","sellCondition","sellPrice","sellOldPrice","sellImage","sellDesc"].forEach(id => {
+      if ($(id)) $(id).value = "";
+    });
+    const prev = $("sellImgPreview");
+    if (prev) prev.style.display = "none";
+
+    $("sellModal").classList.remove("show");
+    toast("✅ \"" + name + "\" publicado! Já está na vitrine e no banco de dados.");
+  } catch (err) {
+    console.error(err);
+    toast("❌ Erro ao publicar. Verifique as regras do Firestore (permissão de escrita em products).");
+  } finally {
+    $("sellSubmit").disabled = false;
+    $("sellSubmit").textContent = "🚀 Publicar Anúncio";
+  }
+});
+
+// Configurações visuais guardadas no próprio navegador.
+const SETTINGS_KEY = "ecoshop_preferences";
+function applySettings(cfg) {
+  const c = cfg || {};
+  document.body.dataset.theme = c.theme || "green";
+  document.body.classList.toggle("compact", !!c.compact);
+  document.body.classList.toggle("no-motion", !!c.noMotion);
+  document.documentElement.style.setProperty("--card-radius", c.corners || "18px");
+  document.documentElement.style.fontSize = (c.font || "16") + "px";
+  if ($("settingFont")) $("settingFont").value = c.font || "16";
+  if ($("settingCompact")) $("settingCompact").checked = !!c.compact;
+  if ($("settingMotion")) $("settingMotion").checked = !!c.noMotion;
+  if ($("settingCorners")) $("settingCorners").value = c.corners || "18px";
+  if ($("settingToasts")) $("settingToasts").checked = c.toasts !== false;
+  if ($("settingSort")) $("settingSort").value = c.sort || "featured";
+}
+function readSettings() { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"); }
+function saveSettings() {
+  const old = readSettings();
+  const theme = document.body.dataset.theme || old.theme || "green";
+  const cfg = { theme, font: $("settingFont").value, compact: $("settingCompact").checked, noMotion: $("settingMotion").checked, corners: $("settingCorners").value, toasts: $("settingToasts").checked, sort: $("settingSort").value };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(cfg)); applySettings(cfg);
+  if ($("sortSelect")) { $("sortSelect").value = cfg.sort; renderProducts(currentCategory, $("search").value, cfg.sort); }
+}
+$("settingsBtn").addEventListener("click", () => $("settingsModal").classList.add("show"));
+document.querySelectorAll("[data-theme-choice]").forEach(b => b.addEventListener("click", () => { const c=readSettings(); c.theme=b.dataset.themeChoice; localStorage.setItem(SETTINGS_KEY,JSON.stringify(c)); applySettings(c); }));
+["settingFont","settingCompact","settingMotion","settingCorners","settingToasts","settingSort"].forEach(id => $(id).addEventListener("change", saveSettings));
+$("resetSettings").addEventListener("click", () => { localStorage.removeItem(SETTINGS_KEY); applySettings({}); toast("Configurações restauradas."); });
+applySettings(readSettings());
+
+document.querySelectorAll("[data-close]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const m = $(btn.dataset.close);
+    if (m) m.classList.remove("show");
+  });
+});
+document.querySelectorAll(".overlay").forEach(overlay => {
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.classList.remove("show");
+  });
+});
+
+currentUser = getSession();
+updateLoginButton();
+updateCartBadge();
+seedIfEmpty().then(listenProducts).catch(err => {
+  console.error(err);
+  const grid = $("productsGrid");
+  if (grid) grid.innerHTML = `<p class="loading" style="color:#991b1b;">Não foi possível conectar ao Firebase.</p>`;
+});
+
+})();
+</script>
+</body>
+</html>
